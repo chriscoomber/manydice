@@ -22,10 +22,10 @@ kotlin {
     js(LEGACY) {
         browser {
             testTask {
-                useKarma {
-                    useChromeHeadless()
-                    webpackConfig.cssSupport.enabled = true
-                }
+//                useKarma {
+//                    useChromeHeadless()
+//                    webpackConfig.cssSupport.enabled = true
+//                }
             }
         }
     }
@@ -63,3 +63,4 @@ kotlin {
         val nativeTest by getting
     }
 }
+
