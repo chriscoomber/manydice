@@ -1,9 +1,14 @@
 package chriscoomber.manydice
 
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class SampleUsage {
+    @Test
+    fun twentyD6() {
+        var twentyD6 = fairDiceSum(20, 6, "20d6")
+        println("20d6 has PMF: ${twentyD6.probabilityMassFunction}")
+    }
+
     @Test
     fun introductionToAllFeatures() {
         // Define simple fair dice. This will be rolled independently to any other dice you define

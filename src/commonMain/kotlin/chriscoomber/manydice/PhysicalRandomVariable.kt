@@ -16,24 +16,48 @@ package chriscoomber.manydice
  * achieved by giving the [PhysicalRandomVariable] its own [PrimitiveFiniteSampleSpace] that is not used by any
  * others - i.e. a space that's disjoint from all others.
  */
-class PhysicalRandomVariable<T>(
+class PhysicalRandomVariable<E>(
     private val space: PrimitiveFiniteSampleSpace,
     private val name: String? = null,
-    private val evaluator: (Int) -> T
-) : FiniteRandomVariable<T> {
+    private val evaluator: (Int) -> E
+) : FiniteRandomVariable<E> {
     override val sampleSpace: FiniteSampleSpace = space
 
-    override fun evaluate(outcome: FiniteOutcome): T {
+    override fun evaluate(outcome: FiniteOutcome): E {
         space.requireOutcomeIsAnElementOfThisSpace(outcome)
         return evaluator(outcome[space]!!)
     }
 
-    override fun copy(mangler: String): FiniteRandomVariable<T> {
+    override fun copy(mangler: String): FiniteRandomVariable<E> {
         // TODO: do some cleverer mangling than this!
         return PhysicalRandomVariable(space.copy(id = space.id + mangler), name?.plus(" (copy)"), evaluator)
     }
 
+    override fun setName(newName: String) = PhysicalRandomVariable(space, newName, evaluator)
+
     override fun toString() = name ?: "PhysicalRandomVariable(primitiveSpace=$space, values=$range)"
 
-    private val range: Set<T> = space.allOutcomes().map(evaluator).toSet()
+    private val range: Set<E> = space.allOutcomes().map(evaluator).toSet()
+
+    companion object {
+        /**
+         * Produce a physical random variable from a probability mass function. The resulting RV will be independent
+         * to all other RVs, so you can think of it like a weighted die with the same PMF as the one given.
+         */
+        fun <E> fromProbabilityMassFunction(pmf: Map<E, Probability>, name: String? = null): PhysicalRandomVariable<E> {
+            val values = pmf.keys.toList()
+            fun outcomeToValue(outcome: Int) = values[outcome-1]
+
+            return PhysicalRandomVariable(
+                space = PrimitiveFiniteSampleSpace(
+                    values.count(), { outcome ->
+                        // The measure of an outcome is the value given in the PMF
+                        pmf[outcomeToValue(outcome)]!!
+                    }
+                ),
+                name = name,
+                evaluator = ::outcomeToValue
+            )
+        }
+    }
 }

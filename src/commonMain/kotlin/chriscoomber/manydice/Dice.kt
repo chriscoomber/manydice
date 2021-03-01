@@ -3,25 +3,29 @@ package chriscoomber.manydice
 /**
  * Construct a new fair dice from its number of faces, numbered from 1 to [faces].
  */
-fun fairDice(faces: Int, name: String? = null) = PhysicalRandomVariable(
-    PrimitiveFiniteSampleSpace(faces, { _ -> 1f/faces }),
-    name ?: "d$faces"
-) { outcome -> outcome }
+fun fairDice(faces: Int, name: String? = null): FiniteRandomVariable<Int> =
+    PhysicalRandomVariable.fromProbabilityMassFunction(
+        (1..faces).associateWith { 1f/faces },
+        name
+    )
 
 /**
  * Construct a new fair dice with faces labelled differently. Pass in a map from face values to the
  * number of faces with that value.
  */
-fun <T> fairDice(facesMap: Map<T, Int>, name: String? = null): PhysicalRandomVariable<T> {
-    val outcomeToFace = mutableListOf<T>()
-    for ((faceValue, occurances) in facesMap) {
-        repeat(occurances) {
-            outcomeToFace.add(faceValue)
-        }
+fun <T> fairDice(facesMap: Map<T, Int>, name: String? = null): FiniteRandomVariable<T> =
+    PhysicalRandomVariable.fromProbabilityMassFunction(
+        facesMap.mapValues { (_, numFaces) -> numFaces.toFloat() / facesMap.values.sum() },
+        name
+    )
+
+fun fairDiceSum(quantity: Int, faces: Int, name: String? = null): FiniteRandomVariable<Int> {
+    var acc = PhysicalRandomVariable.fromProbabilityMassFunction(mapOf(0 to 1f)) as FiniteRandomVariable<Int>  // Start with a dice that's always 0
+
+    repeat(quantity) {
+        acc = (acc + fairDice(faces)).forgetDependencies()
     }
 
-    return PhysicalRandomVariable(
-        PrimitiveFiniteSampleSpace(facesMap.values.sum(), { _ -> 1f / facesMap.values.sum() }),
-        name ?: "d${facesMap.values.sum()} (modified faces)"
-    ) { outcome -> outcomeToFace[outcome-1] }
+    return if (name != null) acc.setName(name) else acc
 }
+
