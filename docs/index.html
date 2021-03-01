@@ -1,19 +1,63 @@
 <!doctype html>
 <html>
     <head>
-        <title>This is the title of the webpage!</title>
+        <title>ManyDice</title>
     </head>
     <body>
         <script src="https://unpkg.com/kotlin-playground@1" data-selector="code" data-server="https://kotlin-compiler.chriscoomber.co.uk"></script>
+        <h2>What is ManyDice?</h2>
+        <p>ManyDice is a Kotlin library that allows you to simulate dice-rolling scenarios, and find out the probability distributions of arbitrary outcomes. For example, are you a Dungeon Master? You can use this tool to design fair but random scenarios, and calculate the chance that your players will succeed. For probability enthusiasts: it can simulate all finite Random Variables, and is capable of handling dependent events and conditional probabilities.</p>
+        <h2>Playground</h2>
+        <p>Use this space to write your dice scenarios. See below for usage information. For now, you will have to copy it to a text file that you save on your computer, to avoid losing it. I plan to make this better in the future.<p>
         <pre><code>
 import chriscoomber.manydice.*
-        
+fun main() {
+//sampleStart
+// Write your code here!
+val X = fairDice(6)
+val result = X.rollAlone()
+println("$X rolled a $result")
+//sampleEnd
+}
+        </code></pre>
+        <h2>How to use ManyDice</h2>
+        <p>The easiest way is to type your code into the box above. However, since it is a Kotlin library you can also import it into your own project. See <a href="https://github.com/chriscoomber/manydice">github</a> for details.</p>
+        <h2>Syntax and examples</h2>
+        <p>It might be useful to know basic Kotlin syntax, such as variables, functions and closures. I won't be able to do a better job than the <a href="https://kotlinlang.org/docs/basic-syntax.html">Kotlin docs</a>.
+        <p>All of these examples can be edited and run on the online compiler. Feel free to experiment as you learn the syntax!</p>
+        <h3>Basics</h3>
+        <p>Fair dice can be defined using some form of the <i>fairDice()</i> function. All dice can be rolled alone with the <i>rollAlone</i> function, or can be rolled together with <i>rollTogether</i>.</p>
+        <pre><code>
+import chriscoomber.manydice.*
+fun main() {
+//sampleStart
+// Here we define two dice
+val X = fairDice(6)
+val Y = fairDice(20)
+
+// Here we roll the first dice and print the result
+val XRoll = X.rollAlone()
+println("$X rolled a $XRoll")
+
+// Rolling the dice again may produce a different result.
+println("Rolling $X a few more times: ${X.rollAlone()}, ${X.rollAlone()}, ${X.rollAlone()}, ${X.rollAlone()}")
+
+// Here we roll both dice together.
+val togetherRoll = rollTogether(listOf(X, Y))
+println("When rolled together we get: $togetherRoll")
+//sampleEnd
+}
+        </code></pre>
+        <h3>TODO: rest of the documentation</h3>
+        <pre><code>
+import chriscoomber.manydice.*
 fun main() {
 //sampleStart
 // Define simple fair dice. This will be rolled independently to any other dice you define
 // in this way.
 val X = fairDice(6, "X")
 val Y = fairDice(6, "y")
+
 // Roll them separately or together
 println("Roll X (1d6): ${X.rollAlone()}")
 println("Roll X again: ${X.rollAlone()}")
