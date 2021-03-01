@@ -1,15 +1,18 @@
-<!doctype html>
-<html>
-    <head>
-        <title>ManyDice</title>
-    </head>
-    <body>
-        <script src="https://unpkg.com/kotlin-playground@1" data-selector="code" data-server="https://kotlin-compiler.chriscoomber.co.uk"></script>
-        <h2>What is ManyDice?</h2>
-        <p>ManyDice is a Kotlin library that allows you to simulate dice-rolling scenarios, and find out the probability distributions of arbitrary outcomes. For example, are you a Dungeon Master? You can use this tool to design fair but random scenarios, and calculate the chance that your players will succeed. For probability enthusiasts: it can simulate all finite Random Variables, and is capable of handling dependent events and conditional probabilities.</p>
-        <h2>Playground</h2>
-        <p>Use this space to write your dice scenarios. See below for usage information. For now, you will have to copy it to a text file that you save on your computer, to avoid losing it. I plan to make this better in the future.<p>
-        <pre><code>
+# ManyDice
+Kotlin dice rolling library for table top RPGs.
+
+<script src="https://unpkg.com/kotlin-playground@1" data-selector="code" data-server="https://kotlin-compiler.chriscoomber.co.uk">
+</script>
+
+## What is ManyDice?
+
+ManyDice is a Kotlin library that allows you to simulate dice-rolling scenarios, and find out the probability distributions of arbitrary outcomes. For example, are you a Dungeon Master? You can use this tool to design fair but random scenarios, and calculate the chance that your players will succeed. For probability enthusiasts: it can simulate all finite Random Variables, and is capable of handling dependent events and conditional probabilities.
+
+## Playground
+
+Use this space to write your dice scenarios. See below for usage information. For now, you will have to copy it to a text file that you save on your computer, to avoid losing it. I plan to make this better in the future.
+
+```
 import chriscoomber.manydice.*
 fun main() {
 //sampleStart
@@ -19,15 +22,23 @@ val result = X.rollAlone()
 println("$X rolled a $result")
 //sampleEnd
 }
-        </code></pre>
-        <h2>How to use ManyDice</h2>
-        <p>The easiest way is to type your code into the box above. However, since it is a Kotlin library you can also import it into your own project. See <a href="https://github.com/chriscoomber/manydice">github</a> for details.</p>
-        <h2>Syntax and examples</h2>
-        <p>It might be useful to know basic Kotlin syntax, such as variables, functions and closures. I won't be able to do a better job than the <a href="https://kotlinlang.org/docs/basic-syntax.html">Kotlin docs</a>.
-        <p>All of these examples can be edited and run on the online compiler. Feel free to experiment as you learn the syntax!</p>
-        <h3>Basics</h3>
-        <p>Fair dice can be defined using some form of the <i>fairDice()</i> function. All dice can be rolled alone with the <i>rollAlone</i> function, or can be rolled together with <i>rollTogether</i>.</p>
-        <pre><code>
+```
+
+## How to use ManyDice
+
+The easiest way is to type your code into the box above. However, since it is a Kotlin library you can also import it into your own project. See <a href="https://github.com/chriscoomber/manydice">github</a> for details.
+
+## Syntax and examples
+
+It might be useful to know basic Kotlin syntax, such as variables, functions and closures. I won't be able to do a better job than the [Kotlin docs](https://kotlinlang.org/docs/basic-syntax.html).
+
+All of these examples can be edited and run on the online compiler. Feel free to experiment as you learn the syntax!
+
+### Basics
+
+Fair dice can be defined using some form of the *fairDice()* function. All dice can be rolled alone with the *rollAlone* function, or can be rolled together with *rollTogether*
+
+```
 import chriscoomber.manydice.*
 fun main() {
 //sampleStart
@@ -47,9 +58,11 @@ val togetherRoll = rollTogether(listOf(X, Y))
 println("When rolled together we get: $togetherRoll")
 //sampleEnd
 }
-        </code></pre>
-        <h3>TODO: rest of the documentation</h3>
-        <pre><code>
+```
+
+### TODO: rest of the documentation
+
+```
 import chriscoomber.manydice.*
 fun main() {
 //sampleStart
@@ -111,6 +124,4 @@ val ZequalsYplus3 = combine(Z, Y) { z, y -> z == y + 3 }.setName("Z = Y + 3")
 println("PMF of X given Z=Y+3: ${X.conditionalProbabilityMassFunction(ZequalsYplus3) { it == true }}")
 //sampleEnd
 }
-        </code></pre>
-    </body>
-</html>
+```
