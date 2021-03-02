@@ -32,6 +32,7 @@ interface FiniteRandomVariable<E>: RandomVariable<FiniteOutcome, E> {
     fun copy(mangler: String = uuid4().toString()): FiniteRandomVariable<E>
 
     fun setName(newName: String): FiniteRandomVariable<E>
+    val name: String
 
     val probabilityMassFunction: Map<E, Float>
         get() {
@@ -82,7 +83,7 @@ interface FiniteRandomVariable<E>: RandomVariable<FiniteOutcome, E> {
      * the same distribution, but will be independent to all other RVs. This can be necessary when combining together
      * more than 5 or so random variables, as otherwise the sample space gets out of hand.
      */
-    fun forgetDependencies(): FiniteRandomVariable<E> = PhysicalRandomVariable.fromProbabilityMassFunction(this.probabilityMassFunction)
+    fun forgetDependencies(): FiniteRandomVariable<E> = PhysicalRandomVariable.fromProbabilityMassFunction(this.probabilityMassFunction, this.name)
 }
 
 fun <E, R> FiniteRandomVariable<E>.map(name: String? = null, mapping: (E) -> R) = MapFiniteRandomVariable(this, name, mapping)
@@ -105,17 +106,19 @@ fun <T1, T2, T3, T4, T5, R> combine(x1: FiniteRandomVariable<T1>, x2: FiniteRand
             (v1, v2, v3, v4), v5 -> mapping(v1, v2, v3, v4, v5)
     }
 
-class MapFiniteRandomVariable<E, R>(val upstream: FiniteRandomVariable<E>, val name: String? = null, val mapping: (E) -> R) :
+class MapFiniteRandomVariable<E, R>(val upstream: FiniteRandomVariable<E>, name: String? = null, val mapping: (E) -> R) :
     FiniteRandomVariable<R> {
+    override val name = name ?: "Map($upstream)"
     override val sampleSpace = upstream.sampleSpace
     override fun evaluate(outcome: Map<PrimitiveFiniteSampleSpace, Int>) = mapping(upstream.evaluate(outcome))
     override fun copy(mangler: String) = MapFiniteRandomVariable(upstream.copy(mangler), name?.plus( " (copy)"), mapping)
-    override fun toString(): String = name ?: "Map($upstream)"
+    override fun toString(): String = name
     override fun setName(newName: String) = MapFiniteRandomVariable(upstream, name, mapping)
 }
 
-class CombineFiniteRandomVariable<E1, E2, R>(val upstream1: FiniteRandomVariable<E1>, val upstream2: FiniteRandomVariable<E2>, val name: String? = null, val mapping: (E1, E2) -> R) :
+class CombineFiniteRandomVariable<E1, E2, R>(val upstream1: FiniteRandomVariable<E1>, val upstream2: FiniteRandomVariable<E2>, name: String? = null, val mapping: (E1, E2) -> R) :
     FiniteRandomVariable<R> {
+    override val name = name ?: "Combination($upstream1, $upstream2)"
     override val sampleSpace = upstream1.sampleSpace.combine(upstream2.sampleSpace)
     override fun evaluate(outcome: Map<PrimitiveFiniteSampleSpace, Int>): R {
         // First we need to project the outcome onto the upstream's spaces.
@@ -138,7 +141,7 @@ class CombineFiniteRandomVariable<E1, E2, R>(val upstream1: FiniteRandomVariable
         return mapping(upstream1Val, upstream2Val)
     }
     override fun copy(mangler: String) = CombineFiniteRandomVariable(upstream1.copy(mangler), upstream2.copy(mangler), name?.plus( " (copy)"), mapping)
-    override fun toString(): String = name ?: "Combination($upstream1, $upstream2)"
+    override fun toString(): String = name
     override fun setName(newName: String) = CombineFiniteRandomVariable(upstream1, upstream2, name, mapping)
 }
 

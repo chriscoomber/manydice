@@ -18,15 +18,19 @@ package chriscoomber.manydice
  */
 class PhysicalRandomVariable<E>(
     private val space: PrimitiveFiniteSampleSpace,
-    private val name: String? = null,
+    name: String? = null,
     private val evaluator: (Int) -> E
 ) : FiniteRandomVariable<E> {
+
     override val sampleSpace: FiniteSampleSpace = space
 
     override fun evaluate(outcome: FiniteOutcome): E {
         space.requireOutcomeIsAnElementOfThisSpace(outcome)
         return evaluator(outcome[space]!!)
     }
+
+    private val range: Set<E> = space.allOutcomes().map(evaluator).toSet()
+    override val name: String = name ?: "PhysicalRandomVariable(primitiveSpace=$space, values=$range)"
 
     override fun copy(mangler: String): FiniteRandomVariable<E> {
         // TODO: do some cleverer mangling than this!
@@ -35,9 +39,7 @@ class PhysicalRandomVariable<E>(
 
     override fun setName(newName: String) = PhysicalRandomVariable(space, newName, evaluator)
 
-    override fun toString() = name ?: "PhysicalRandomVariable(primitiveSpace=$space, values=$range)"
-
-    private val range: Set<E> = space.allOutcomes().map(evaluator).toSet()
+    override fun toString() = name
 
     companion object {
         /**
