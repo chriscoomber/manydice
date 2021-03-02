@@ -125,3 +125,14 @@ println("PMF of X given Z=Y+3: ${X.conditionalProbabilityMassFunction(ZequalsYpl
 //sampleEnd
 }
 ```
+
+#### Test JS compiling
+
+<pre><code data-target-platform="js">
+import chriscoomber.manydice.*
+
+fun main() {
+    val x = fairDice(6)
+    println(x.rollAlone())
+}
+</code></pre>
