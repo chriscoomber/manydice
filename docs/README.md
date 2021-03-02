@@ -12,7 +12,7 @@ ManyDice is a Kotlin library that allows you to simulate dice-rolling scenarios,
 
 Use this space to write your dice scenarios. See below for usage information. For now, you will have to copy it to a text file that you save on your computer, to avoid losing it. I plan to make this better in the future.
 
-```
+<pre><code data-target-platform="js" data-js-libs="https://wyvern.jfrog.io/artifactory/maven-public/com/benasher44/uuid-js/0.2.3/uuid-js-0.2.3.jar!/uuid-jsLegacy.js,https://wyvern.jfrog.io/artifactory/maven-public/chriscoomber/manydice-js/0.2.2/manydice-js-0.2.2.jar!/manydice.js">
 import chriscoomber.manydice.*
 fun main() {
 //sampleStart
@@ -22,7 +22,7 @@ val result = X.rollAlone()
 println("$X rolled a $result")
 //sampleEnd
 }
-```
+</code></pre>
 
 ## How to use ManyDice
 
@@ -38,7 +38,7 @@ All of these examples can be edited and run on the online compiler. Feel free to
 
 Fair dice can be defined using some form of the *fairDice()* function. All dice can be rolled alone with the *rollAlone* function, or can be rolled together with *rollTogether*
 
-```
+<pre><code data-target-platform="js" data-js-libs="https://wyvern.jfrog.io/artifactory/maven-public/com/benasher44/uuid-js/0.2.3/uuid-js-0.2.3.jar!/uuid-jsLegacy.js,https://wyvern.jfrog.io/artifactory/maven-public/chriscoomber/manydice-js/0.2.2/manydice-js-0.2.2.jar!/manydice.js">
 import chriscoomber.manydice.*
 fun main() {
 //sampleStart
@@ -58,11 +58,11 @@ val togetherRoll = rollTogether(listOf(X, Y))
 println("When rolled together we get: $togetherRoll")
 //sampleEnd
 }
-```
+</code></pre>
 
 ### TODO: rest of the documentation
 
-```
+<pre><code data-target-platform="js" data-js-libs="https://wyvern.jfrog.io/artifactory/maven-public/com/benasher44/uuid-js/0.2.3/uuid-js-0.2.3.jar!/uuid-jsLegacy.js,https://wyvern.jfrog.io/artifactory/maven-public/chriscoomber/manydice-js/0.2.2/manydice-js-0.2.2.jar!/manydice.js">
 import chriscoomber.manydice.*
 fun main() {
 //sampleStart
@@ -123,16 +123,5 @@ println("PMF of X given Z>10: ${X.conditionalProbabilityMassFunction(Z) { it > 1
 val ZequalsYplus3 = combine(Z, Y) { z, y -> z == y + 3 }.setName("Z = Y + 3")
 println("PMF of X given Z=Y+3: ${X.conditionalProbabilityMassFunction(ZequalsYplus3) { it == true }}")
 //sampleEnd
-}
-```
-
-#### Test JS compiling
-
-<pre><code data-target-platform="js" data-js-libs="https://wyvern.jfrog.io/artifactory/maven-public/com/benasher44/uuid-js/0.2.3/uuid-js-0.2.3.jar!/uuid-jsLegacy.js,https://wyvern.jfrog.io/artifactory/maven-public/chriscoomber/manydice-js/0.2.2/manydice-js-0.2.2.jar!/manydice.js">
-import chriscoomber.manydice.*
-
-fun main() {
-    val x = fairDice(6)
-    println(x.rollAlone())
 }
 </code></pre>
