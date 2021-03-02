@@ -128,7 +128,7 @@ println("PMF of X given Z=Y+3: ${X.conditionalProbabilityMassFunction(ZequalsYpl
 
 #### Test JS compiling
 
-<pre><code data-target-platform="js">
+<pre><code data-target-platform="js" data-js-libs="https://wyvern.jfrog.io/artifactory/maven-public/chriscoomber/manydice-js/0.2.2/manydice-js-0.2.2.jar!/manydice.js">
 import chriscoomber.manydice.*
 
 fun main() {
