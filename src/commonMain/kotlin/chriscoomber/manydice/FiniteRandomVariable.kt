@@ -1,6 +1,7 @@
 package chriscoomber.manydice
 
 import com.benasher44.uuid.uuid4
+import kotlin.jvm.JvmName
 
 /**
  * A random variable is a function from a particular sample space Omega to some measurable space E
@@ -29,7 +30,7 @@ interface FiniteRandomVariable<E>: RandomVariable<FiniteOutcome, E> {
      * that Z1 is a RV on A1 x B1; i.e. that A1 is the same A1 that's used in X, so they share
      * outcomes from A1.
      */
-    fun copy(mangler: String = uuid4().toString()): FiniteRandomVariable<E>
+    fun clone(mangler: String = uuid4().toString()): FiniteRandomVariable<E>
 
     fun setName(newName: String): FiniteRandomVariable<E>
     val name: String
@@ -65,6 +66,9 @@ interface FiniteRandomVariable<E>: RandomVariable<FiniteOutcome, E> {
         return resultMap
     }
 
+    fun conditionalProbabilityMassFunction(other: FiniteRandomVariable<Boolean>): Map<E, Float> =
+        conditionalProbabilityMassFunction(other) { it }
+
     fun <E2> conditionalProbabilityMassFunction(other: FiniteRandomVariable<E2>, condition: (E2) -> Boolean): Map<E, Float> {
         // First we massage both this and other so they're using the same probability space
         val thisMassaged = combine(this, other) { v1, _ -> v1 }
@@ -86,37 +90,38 @@ interface FiniteRandomVariable<E>: RandomVariable<FiniteOutcome, E> {
     fun forgetDependencies(): FiniteRandomVariable<E> = PhysicalRandomVariable.fromProbabilityMassFunction(this.probabilityMassFunction, this.name)
 }
 
-fun <E, R> FiniteRandomVariable<E>.map(name: String? = null, mapping: (E) -> R) = MapFiniteRandomVariable(this, name, mapping)
+inline fun <E, R> FiniteRandomVariable<E>.map(name: String? = null, crossinline mapping: (E) -> R) = MapFiniteRandomVariable(this, name) { mapping(it) }
 
 // TODO more combines
-fun <E1, E2, R> combine(x1: FiniteRandomVariable<E1>, x2: FiniteRandomVariable<E2>, name: String? = null, mapping: (E1, E2) -> R) = CombineFiniteRandomVariable(x1, x2, name, mapping)
-fun <T1, T2, T3, R> combine(x1: FiniteRandomVariable<T1>, x2: FiniteRandomVariable<T2>, x3: FiniteRandomVariable<T3>, name: String? = null, mapping: (T1, T2, T3) -> R) =
-    combine(combine(x1, x2, null, { v1, v2 -> Pair(v1, v2) }), x3, name) {
-            (v1, v2), v3 -> mapping(v1, v2, v3)
+inline fun <E1, E2, R> combine(x1: FiniteRandomVariable<E1>, x2: FiniteRandomVariable<E2>, name: String? = null, crossinline mapping: (E1, E2) -> R) =
+    CombineFiniteRandomVariable(x1, x2, name) { v1, v2 -> mapping(v1, v2) }
+inline fun <T1, T2, T3, R> combine(x1: FiniteRandomVariable<T1>, x2: FiniteRandomVariable<T2>, x3: FiniteRandomVariable<T3>, name: String? = null, crossinline mapping: (T1, T2, T3) -> R) =
+    combine(combine(x1, x2, null) { v1, v2 -> Pair(v1, v2) }, x3, name) {
+        (v1, v2), v3 -> mapping(v1, v2, v3)
     }
-fun <T1, T2, T3, T4, R> combine(x1: FiniteRandomVariable<T1>, x2: FiniteRandomVariable<T2>, x3: FiniteRandomVariable<T3>, x4: FiniteRandomVariable<T4>, name: String? = null, mapping: (T1, T2, T3, T4) -> R) =
-    combine(combine(x1, x2, x3, null, { v1, v2, v3 -> Triple(v1, v2, v3) }), x4, name) {
-            (v1, v2, v3), v4 -> mapping(v1, v2, v3, v4)
+inline fun <T1, T2, T3, T4, R> combine(x1: FiniteRandomVariable<T1>, x2: FiniteRandomVariable<T2>, x3: FiniteRandomVariable<T3>, x4: FiniteRandomVariable<T4>, name: String? = null, crossinline mapping: (T1, T2, T3, T4) -> R) =
+    combine(combine(x1, x2, x3, null) { v1, v2, v3 -> Triple(v1, v2, v3) }, x4, name) {
+        (v1, v2, v3), v4 -> mapping(v1, v2, v3, v4)
     }
 data class Tuple4<T1, T2, T3, T4>(val x1: T1, val x2: T2, val x3: T3, val x4: T4) {
     override fun toString() = "($x1, $x2, $x3, $x4)"
 }
-fun <T1, T2, T3, T4, T5, R> combine(x1: FiniteRandomVariable<T1>, x2: FiniteRandomVariable<T2>, x3: FiniteRandomVariable<T3>, x4: FiniteRandomVariable<T4>, x5: FiniteRandomVariable<T5>, name: String? = null, mapping: (T1, T2, T3, T4, T5) -> R) =
-    combine(combine(x1, x2, x3, x4, null, { v1, v2, v3, v4 -> Tuple4(v1, v2, v3, v4) }), x5, name) {
-            (v1, v2, v3, v4), v5 -> mapping(v1, v2, v3, v4, v5)
+inline fun <T1, T2, T3, T4, T5, R> combine(x1: FiniteRandomVariable<T1>, x2: FiniteRandomVariable<T2>, x3: FiniteRandomVariable<T3>, x4: FiniteRandomVariable<T4>, x5: FiniteRandomVariable<T5>, name: String? = null, crossinline mapping: (T1, T2, T3, T4, T5) -> R) =
+    combine(combine(x1, x2, x3, x4, null) { v1, v2, v3, v4 -> Tuple4(v1, v2, v3, v4) }, x5, name) {
+        (v1, v2, v3, v4), v5 -> mapping(v1, v2, v3, v4, v5)
     }
 
-class MapFiniteRandomVariable<E, R>(val upstream: FiniteRandomVariable<E>, name: String? = null, val mapping: (E) -> R) :
+class MapFiniteRandomVariable<E, R>(private val upstream: FiniteRandomVariable<E>, name: String? = null, val mapping: (E) -> R) :
     FiniteRandomVariable<R> {
     override val name = name ?: "Map($upstream)"
     override val sampleSpace = upstream.sampleSpace
     override fun evaluate(outcome: Map<PrimitiveFiniteSampleSpace, Int>) = mapping(upstream.evaluate(outcome))
-    override fun copy(mangler: String) = MapFiniteRandomVariable(upstream.copy(mangler), name?.plus( " (copy)"), mapping)
+    override fun clone(mangler: String) = MapFiniteRandomVariable(upstream.clone(mangler), "Copy($name)", mapping)
     override fun toString(): String = name
     override fun setName(newName: String) = MapFiniteRandomVariable(upstream, name, mapping)
 }
 
-class CombineFiniteRandomVariable<E1, E2, R>(val upstream1: FiniteRandomVariable<E1>, val upstream2: FiniteRandomVariable<E2>, name: String? = null, val mapping: (E1, E2) -> R) :
+class CombineFiniteRandomVariable<E1, E2, R>(private val upstream1: FiniteRandomVariable<E1>, private val upstream2: FiniteRandomVariable<E2>, name: String? = null, val mapping: (E1, E2) -> R) :
     FiniteRandomVariable<R> {
     override val name = name ?: "Combination($upstream1, $upstream2)"
     override val sampleSpace = upstream1.sampleSpace.combine(upstream2.sampleSpace)
@@ -140,19 +145,158 @@ class CombineFiniteRandomVariable<E1, E2, R>(val upstream1: FiniteRandomVariable
 
         return mapping(upstream1Val, upstream2Val)
     }
-    override fun copy(mangler: String) = CombineFiniteRandomVariable(upstream1.copy(mangler), upstream2.copy(mangler), name?.plus( " (copy)"), mapping)
+    override fun clone(mangler: String) = CombineFiniteRandomVariable(upstream1.clone(mangler), upstream2.clone(mangler), "Copy($name)", mapping)
     override fun toString(): String = name
     override fun setName(newName: String) = CombineFiniteRandomVariable(upstream1, upstream2, name, mapping)
 }
 
-
 // Simplify basic operations for sensible types
-operator fun FiniteRandomVariable<Int>.plus(other: FiniteRandomVariable<Int>) = combine(this, other) { v1, v2 -> v1 + v2 }
-operator fun FiniteRandomVariable<Int>.minus(other: FiniteRandomVariable<Int>) = combine(this, other) { v1, v2 -> v1 - v2 }
-operator fun FiniteRandomVariable<Int>.times(other: FiniteRandomVariable<Int>) = combine(this, other) { v1, v2 -> v1 * v2 }
-operator fun FiniteRandomVariable<Int>.plus(other: Int) = this.map { it + other }
-operator fun FiniteRandomVariable<Int>.minus(other: Int) = this.map { it - other }
-operator fun FiniteRandomVariable<Int>.times(other: Int) = this.map { it * other}
+private inline fun <E, R> FiniteRandomVariable<E>.unaryOperator(crossinline function: (E) -> R): FiniteRandomVariable<R> =
+    this.map(mapping=function)
+private inline fun <E1, E2, R> FiniteRandomVariable<E1>.binaryOperator(other: E2, crossinline function: (E1, E2) -> R): FiniteRandomVariable<R> =
+    this.map { function(it, other) }
+private inline fun <E1, E2, R> FiniteRandomVariable<E1>.binaryOperatorCombine(other: FiniteRandomVariable<E2>, crossinline function: (E1, E2) -> R): FiniteRandomVariable<R> =
+    combine(this, other, mapping=function)
+
+// Numbers: Byte Short Int Long Float Double
+// Logic: Boolean
+// Text: Char String
+// TODO: finish this!
+
+// Int
+operator fun FiniteRandomVariable<Int>.unaryMinus() = this.unaryOperator(Int::unaryMinus)
+operator fun FiniteRandomVariable<Int>.unaryPlus() = this.unaryOperator(Int::unaryPlus)
+operator fun FiniteRandomVariable<Int>.inc() = this.unaryOperator(Int::inc)
+operator fun FiniteRandomVariable<Int>.dec() = this.unaryOperator(Int::inc)
+operator fun FiniteRandomVariable<Int>.plus(other: Byte) = this.binaryOperator(other, Int::plus)
+operator fun FiniteRandomVariable<Int>.plus(other: Short) = this.binaryOperator(other, Int::plus)
+operator fun FiniteRandomVariable<Int>.plus(other: Int) = this.binaryOperator(other, Int::plus)
+operator fun FiniteRandomVariable<Int>.plus(other: Long) = this.binaryOperator(other, Int::plus)
+operator fun FiniteRandomVariable<Int>.plus(other: Float) = this.binaryOperator(other, Int::plus)
+operator fun FiniteRandomVariable<Int>.plus(other: Double) = this.binaryOperator(other, Int::plus)
+@JvmName("plusByte") operator fun FiniteRandomVariable<Int>.plus(other: FiniteRandomVariable<Byte>) = this.binaryOperatorCombine(other, Int::plus)
+@JvmName("plusShort") operator fun FiniteRandomVariable<Int>.plus(other: FiniteRandomVariable<Short>) = this.binaryOperatorCombine(other, Int::plus)
+@JvmName("plusInt") operator fun FiniteRandomVariable<Int>.plus(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::plus)
+@JvmName("plusLong") operator fun FiniteRandomVariable<Int>.plus(other: FiniteRandomVariable<Long>) = this.binaryOperatorCombine(other, Int::plus)
+@JvmName("plusFloat") operator fun FiniteRandomVariable<Int>.plus(other: FiniteRandomVariable<Float>) = this.binaryOperatorCombine(other, Int::plus)
+@JvmName("plusDouble") operator fun FiniteRandomVariable<Int>.plus(other: FiniteRandomVariable<Double>) = this.binaryOperatorCombine(other, Int::plus)
+operator fun FiniteRandomVariable<Int>.minus(other: Byte) = this.binaryOperator(other, Int::minus)
+operator fun FiniteRandomVariable<Int>.minus(other: Short) = this.binaryOperator(other, Int::minus)
+operator fun FiniteRandomVariable<Int>.minus(other: Int) = this.binaryOperator(other, Int::minus)
+operator fun FiniteRandomVariable<Int>.minus(other: Long) = this.binaryOperator(other, Int::minus)
+operator fun FiniteRandomVariable<Int>.minus(other: Float) = this.binaryOperator(other, Int::minus)
+operator fun FiniteRandomVariable<Int>.minus(other: Double) = this.binaryOperator(other, Int::minus)
+@JvmName("minusByte") operator fun FiniteRandomVariable<Int>.minus(other: FiniteRandomVariable<Byte>) = this.binaryOperatorCombine(other, Int::minus)
+@JvmName("minusShort") operator fun FiniteRandomVariable<Int>.minus(other: FiniteRandomVariable<Short>) = this.binaryOperatorCombine(other, Int::minus)
+@JvmName("minusInt") operator fun FiniteRandomVariable<Int>.minus(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::minus)
+@JvmName("minusLong") operator fun FiniteRandomVariable<Int>.minus(other: FiniteRandomVariable<Long>) = this.binaryOperatorCombine(other, Int::minus)
+@JvmName("minusFloat") operator fun FiniteRandomVariable<Int>.minus(other: FiniteRandomVariable<Float>) = this.binaryOperatorCombine(other, Int::minus)
+@JvmName("minusDouble") operator fun FiniteRandomVariable<Int>.minus(other: FiniteRandomVariable<Double>) = this.binaryOperatorCombine(other, Int::minus)
+operator fun FiniteRandomVariable<Int>.times(other: Byte) = this.binaryOperator(other, Int::times)
+operator fun FiniteRandomVariable<Int>.times(other: Short) = this.binaryOperator(other, Int::times)
+operator fun FiniteRandomVariable<Int>.times(other: Int) = this.binaryOperator(other, Int::times)
+operator fun FiniteRandomVariable<Int>.times(other: Long) = this.binaryOperator(other, Int::times)
+operator fun FiniteRandomVariable<Int>.times(other: Float) = this.binaryOperator(other, Int::times)
+operator fun FiniteRandomVariable<Int>.times(other: Double) = this.binaryOperator(other, Int::times)
+@JvmName("timesByte") operator fun FiniteRandomVariable<Int>.times(other: FiniteRandomVariable<Byte>) = this.binaryOperatorCombine(other, Int::times)
+@JvmName("timesShort") operator fun FiniteRandomVariable<Int>.times(other: FiniteRandomVariable<Short>) = this.binaryOperatorCombine(other, Int::times)
+@JvmName("timesInt") operator fun FiniteRandomVariable<Int>.times(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::times)
+@JvmName("timesLong") operator fun FiniteRandomVariable<Int>.times(other: FiniteRandomVariable<Long>) = this.binaryOperatorCombine(other, Int::times)
+@JvmName("timesFloat") operator fun FiniteRandomVariable<Int>.times(other: FiniteRandomVariable<Float>) = this.binaryOperatorCombine(other, Int::times)
+@JvmName("timesDouble") operator fun FiniteRandomVariable<Int>.times(other: FiniteRandomVariable<Double>) = this.binaryOperatorCombine(other, Int::times)
+operator fun FiniteRandomVariable<Int>.div(other: Byte) = this.binaryOperator(other, Int::div)
+operator fun FiniteRandomVariable<Int>.div(other: Short) = this.binaryOperator(other, Int::div)
+operator fun FiniteRandomVariable<Int>.div(other: Int) = this.binaryOperator(other, Int::div)
+operator fun FiniteRandomVariable<Int>.div(other: Long) = this.binaryOperator(other, Int::div)
+operator fun FiniteRandomVariable<Int>.div(other: Float) = this.binaryOperator(other, Int::div)
+operator fun FiniteRandomVariable<Int>.div(other: Double) = this.binaryOperator(other, Int::div)
+@JvmName("divByte") operator fun FiniteRandomVariable<Int>.div(other: FiniteRandomVariable<Byte>) = this.binaryOperatorCombine(other, Int::div)
+@JvmName("divShort") operator fun FiniteRandomVariable<Int>.div(other: FiniteRandomVariable<Short>) = this.binaryOperatorCombine(other, Int::div)
+@JvmName("divInt") operator fun FiniteRandomVariable<Int>.div(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::div)
+@JvmName("divLong") operator fun FiniteRandomVariable<Int>.div(other: FiniteRandomVariable<Long>) = this.binaryOperatorCombine(other, Int::div)
+@JvmName("divFloat") operator fun FiniteRandomVariable<Int>.div(other: FiniteRandomVariable<Float>) = this.binaryOperatorCombine(other, Int::div)
+@JvmName("divDouble") operator fun FiniteRandomVariable<Int>.div(other: FiniteRandomVariable<Double>) = this.binaryOperatorCombine(other, Int::div)
+operator fun FiniteRandomVariable<Int>.rem(other: Byte) = this.binaryOperator(other, Int::rem)
+operator fun FiniteRandomVariable<Int>.rem(other: Short) = this.binaryOperator(other, Int::rem)
+operator fun FiniteRandomVariable<Int>.rem(other: Int) = this.binaryOperator(other, Int::rem)
+operator fun FiniteRandomVariable<Int>.rem(other: Long) = this.binaryOperator(other, Int::rem)
+operator fun FiniteRandomVariable<Int>.rem(other: Float) = this.binaryOperator(other, Int::rem)
+operator fun FiniteRandomVariable<Int>.rem(other: Double) = this.binaryOperator(other, Int::rem)
+@JvmName("remByte") operator fun FiniteRandomVariable<Int>.rem(other: FiniteRandomVariable<Byte>) = this.binaryOperatorCombine(other, Int::rem)
+@JvmName("remShort") operator fun FiniteRandomVariable<Int>.rem(other: FiniteRandomVariable<Short>) = this.binaryOperatorCombine(other, Int::rem)
+@JvmName("remInt") operator fun FiniteRandomVariable<Int>.rem(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::rem)
+@JvmName("remLong") operator fun FiniteRandomVariable<Int>.rem(other: FiniteRandomVariable<Long>) = this.binaryOperatorCombine(other, Int::rem)
+@JvmName("remFloat") operator fun FiniteRandomVariable<Int>.rem(other: FiniteRandomVariable<Float>) = this.binaryOperatorCombine(other, Int::rem)
+@JvmName("remDouble") operator fun FiniteRandomVariable<Int>.rem(other: FiniteRandomVariable<Double>) = this.binaryOperatorCombine(other, Int::rem)
+operator fun FiniteRandomVariable<Int>.rangeTo(other: Byte) = this.binaryOperator(other, Int::rangeTo)
+operator fun FiniteRandomVariable<Int>.rangeTo(other: Short) = this.binaryOperator(other, Int::rangeTo)
+operator fun FiniteRandomVariable<Int>.rangeTo(other: Int) = this.binaryOperator(other, Int::rangeTo)
+operator fun FiniteRandomVariable<Int>.rangeTo(other: Long) = this.binaryOperator(other, Int::rangeTo)
+infix fun FiniteRandomVariable<Int>.gt(other: Byte) = this.binaryOperator(other) { v1, v2 -> v1 > v2 }
+infix fun FiniteRandomVariable<Int>.gt(other: Short) = this.binaryOperator(other) { v1, v2 -> v1 > v2 }
+infix fun FiniteRandomVariable<Int>.gt(other: Int) = this.binaryOperator(other) { v1, v2 -> v1 > v2 }
+infix fun FiniteRandomVariable<Int>.gt(other: Long) = this.binaryOperator(other) { v1, v2 -> v1 > v2 }
+infix fun FiniteRandomVariable<Int>.gt(other: Float) = this.binaryOperator(other) { v1, v2 -> v1 > v2 }
+infix fun FiniteRandomVariable<Int>.gt(other: Double) = this.binaryOperator(other) { v1, v2 -> v1 > v2 }
+@JvmName("gtByte") infix fun FiniteRandomVariable<Int>.gt(other: FiniteRandomVariable<Byte>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 > v2 }
+@JvmName("gtShort") infix fun FiniteRandomVariable<Int>.gt(other: FiniteRandomVariable<Short>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 > v2 }
+@JvmName("gtInt") infix fun FiniteRandomVariable<Int>.gt(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 > v2 }
+@JvmName("gtLong") infix fun FiniteRandomVariable<Int>.gt(other: FiniteRandomVariable<Long>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 > v2 }
+@JvmName("gtFloat") infix fun FiniteRandomVariable<Int>.gt(other: FiniteRandomVariable<Float>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 > v2 }
+@JvmName("gtDouble") infix fun FiniteRandomVariable<Int>.gt(other: FiniteRandomVariable<Double>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 > v2 }
+infix fun FiniteRandomVariable<Int>.ge(other: Byte) = this.binaryOperator(other) { v1, v2 -> v1 >= v2 }
+infix fun FiniteRandomVariable<Int>.ge(other: Short) = this.binaryOperator(other) { v1, v2 -> v1 >= v2 }
+infix fun FiniteRandomVariable<Int>.ge(other: Int) = this.binaryOperator(other) { v1, v2 -> v1 >= v2 }
+infix fun FiniteRandomVariable<Int>.ge(other: Long) = this.binaryOperator(other) { v1, v2 -> v1 >= v2 }
+infix fun FiniteRandomVariable<Int>.ge(other: Float) = this.binaryOperator(other) { v1, v2 -> v1 >= v2 }
+infix fun FiniteRandomVariable<Int>.ge(other: Double) = this.binaryOperator(other) { v1, v2 -> v1 >= v2 }
+@JvmName("geByte") infix fun FiniteRandomVariable<Int>.ge(other: FiniteRandomVariable<Byte>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 >= v2 }
+@JvmName("geShort") infix fun FiniteRandomVariable<Int>.ge(other: FiniteRandomVariable<Short>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 >= v2 }
+@JvmName("geInt") infix fun FiniteRandomVariable<Int>.ge(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 >= v2 }
+@JvmName("geLong") infix fun FiniteRandomVariable<Int>.ge(other: FiniteRandomVariable<Long>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 >= v2 }
+@JvmName("geFloat") infix fun FiniteRandomVariable<Int>.ge(other: FiniteRandomVariable<Float>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 >= v2 }
+@JvmName("geDouble") infix fun FiniteRandomVariable<Int>.ge(other: FiniteRandomVariable<Double>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 >= v2 }
+infix fun FiniteRandomVariable<Int>.eq(other: Any?) = this.binaryOperator(other, Int::equals)
+infix fun FiniteRandomVariable<Int>.eq(other: FiniteRandomVariable<Any?>) = this.binaryOperator(other, Int::equals)
+infix fun FiniteRandomVariable<Int>.le(other: Byte) = this.binaryOperator(other) { v1, v2 -> v1 <= v2 }
+infix fun FiniteRandomVariable<Int>.le(other: Short) = this.binaryOperator(other) { v1, v2 -> v1 <= v2 }
+infix fun FiniteRandomVariable<Int>.le(other: Int) = this.binaryOperator(other) { v1, v2 -> v1 <= v2 }
+infix fun FiniteRandomVariable<Int>.le(other: Long) = this.binaryOperator(other) { v1, v2 -> v1 <= v2 }
+infix fun FiniteRandomVariable<Int>.le(other: Float) = this.binaryOperator(other) { v1, v2 -> v1 <= v2 }
+infix fun FiniteRandomVariable<Int>.le(other: Double) = this.binaryOperator(other) { v1, v2 -> v1 <= v2 }
+@JvmName("leByte") infix fun FiniteRandomVariable<Int>.le(other: FiniteRandomVariable<Byte>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 <= v2 }
+@JvmName("leShort") infix fun FiniteRandomVariable<Int>.le(other: FiniteRandomVariable<Short>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 <= v2 }
+@JvmName("leInt") infix fun FiniteRandomVariable<Int>.le(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 <= v2 }
+@JvmName("leLong") infix fun FiniteRandomVariable<Int>.le(other: FiniteRandomVariable<Long>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 <= v2 }
+@JvmName("leFloat") infix fun FiniteRandomVariable<Int>.le(other: FiniteRandomVariable<Float>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 <= v2 }
+@JvmName("leDouble") infix fun FiniteRandomVariable<Int>.le(other: FiniteRandomVariable<Double>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 <= v2 }
+infix fun FiniteRandomVariable<Int>.lt(other: Byte) = this.binaryOperator(other) { v1, v2 -> v1 < v2 }
+infix fun FiniteRandomVariable<Int>.lt(other: Short) = this.binaryOperator(other) { v1, v2 -> v1 < v2 }
+infix fun FiniteRandomVariable<Int>.lt(other: Int) = this.binaryOperator(other) { v1, v2 -> v1 < v2 }
+infix fun FiniteRandomVariable<Int>.lt(other: Long) = this.binaryOperator(other) { v1, v2 -> v1 < v2 }
+infix fun FiniteRandomVariable<Int>.lt(other: Float) = this.binaryOperator(other) { v1, v2 -> v1 < v2 }
+infix fun FiniteRandomVariable<Int>.lt(other: Double) = this.binaryOperator(other) { v1, v2 -> v1 < v2 }
+@JvmName("ltByte") infix fun FiniteRandomVariable<Int>.lt(other: FiniteRandomVariable<Byte>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 < v2 }
+@JvmName("ltShort") infix fun FiniteRandomVariable<Int>.lt(other: FiniteRandomVariable<Short>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 < v2 }
+@JvmName("ltInt") infix fun FiniteRandomVariable<Int>.lt(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 < v2 }
+@JvmName("ltLong") infix fun FiniteRandomVariable<Int>.lt(other: FiniteRandomVariable<Long>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 < v2 }
+@JvmName("ltFloat") infix fun FiniteRandomVariable<Int>.lt(other: FiniteRandomVariable<Float>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 < v2 }
+@JvmName("ltDouble") infix fun FiniteRandomVariable<Int>.lt(other: FiniteRandomVariable<Double>) = this.binaryOperatorCombine(other) { v1, v2 -> v1 < v2 }
+infix fun FiniteRandomVariable<Int>.and(other: Int) = this.binaryOperator(other, Int::and)
+infix fun FiniteRandomVariable<Int>.and(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::and)
+infix fun FiniteRandomVariable<Int>.or(other: Int) = this.binaryOperator(other, Int::or)
+infix fun FiniteRandomVariable<Int>.or(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::or)
+infix fun FiniteRandomVariable<Int>.xor(other: Int) = this.binaryOperator(other, Int::xor)
+infix fun FiniteRandomVariable<Int>.xor(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::xor)
+infix fun FiniteRandomVariable<Int>.shl(other: Int) = this.binaryOperator(other, Int::shl)
+infix fun FiniteRandomVariable<Int>.shl(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::shl)
+infix fun FiniteRandomVariable<Int>.shr(other: Int) = this.binaryOperator(other, Int::shr)
+infix fun FiniteRandomVariable<Int>.shr(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::shr)
+infix fun FiniteRandomVariable<Int>.ushr(other: Int) = this.binaryOperator(other, Int::ushr)
+infix fun FiniteRandomVariable<Int>.ushr(other: FiniteRandomVariable<Int>) = this.binaryOperatorCombine(other, Int::ushr)
+
+// Boolean
+operator fun FiniteRandomVariable<Boolean>.not() = this.map { !it }
 
 // Rolling
 /**

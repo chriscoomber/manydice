@@ -32,7 +32,7 @@ class PhysicalRandomVariable<E>(
     private val range: Set<E> = space.allOutcomes().map(evaluator).toSet()
     override val name: String = name ?: "PhysicalRandomVariable(primitiveSpace=$space, values=$range)"
 
-    override fun copy(mangler: String): FiniteRandomVariable<E> {
+    override fun clone(mangler: String): FiniteRandomVariable<E> {
         // TODO: do some cleverer mangling than this!
         return PhysicalRandomVariable(space.copy(id = space.id + mangler), name?.plus(" (copy)"), evaluator)
     }

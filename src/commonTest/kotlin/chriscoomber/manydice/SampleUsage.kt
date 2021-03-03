@@ -1,5 +1,6 @@
 package chriscoomber.manydice
 
+import kotlin.math.pow
 import kotlin.test.Test
 
 class SampleUsage {
@@ -43,16 +44,16 @@ class SampleUsage {
         // you can use the `map` and `combine` functions.
         val coin = fairDice(2).map { if (it == 1) "Heads" else "Tails" }.setName("coin")
         println("Flip coin: ${coin.rollAlone()}")
-        val XgreaterThanY = combine(X, Y) { x, y -> x > y }.setName("X > Y")
-        println("Roll X, Y and X>Y: ${rollTogether(X, Y, XgreaterThanY)}")
+        val XToPowerOfY = combine(X, Y) { x, y -> x.toDouble().pow(y).toInt() }.setName("X ^ Y")
+        println("Roll X, Y and X>Y: ${rollTogether(X, Y, XToPowerOfY)}")
 
         // Can make copies of dice which are independent to their original.
-        val Xcopy = X.copy()
+        val Xcopy = X.clone()
         println("X and Xcopy can take different values: ${rollTogether(X, Xcopy)}")
 
         // Can even make copies of general random variables, such as X + Y. This makes a copy of
         // all relevant random variables under the hood.
-        val Zcopy = Z.copy()
+        val Zcopy = Z.clone()
         println("Zcopy is totally independent from X, Y and Z: ${rollTogether(listOf(X, Y, Z, Zcopy))}")
 
         // You can also find out the distribution of any random variable
@@ -63,8 +64,11 @@ class SampleUsage {
 
         // You can also ask for the distribution of a random variable, given some restraint on
         // another random variable
-        println("PMF of X given Z>10: ${X.conditionalProbabilityMassFunction(Z) { it > 10 }}")
-        val ZequalsYplus3 = combine(Z, Y) { z, y -> z == y + 3 }.setName("Z = Y + 3")
-        println("PMF of X given Z=Y+3: ${X.conditionalProbabilityMassFunction(ZequalsYplus3) { it == true }}")
+        println("PMF of X given Z>10: ${X.conditionalProbabilityMassFunction(Z gt 10)}")
+
+        // If the other random variable Boolean-valued (true or false), you can omit the restraint
+        // and it will be assumed to be { it == true }
+        val ZequalsYplus3: FiniteRandomVariable<Boolean> = (Z eq Y + 3).setName("Z = Y + 3")
+        println("PMF of X given Z=Y+3: ${X.conditionalProbabilityMassFunction(ZequalsYplus3)}")
     }
 }
